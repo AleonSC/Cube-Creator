@@ -18,11 +18,12 @@ export const SHADING_SCHEMA = {
 
 export const MATERIAL_SCHEMAS = {
   base: {
+    unlit: b('Unlit (exact colour)', { hint: 'Ignores lights and reflections, so black is truly black. Exports as an unlit material.' }),
     color: c('Base colour / tint'),
-    metalness: r('Metalness', 0, 1, 0.01),
-    roughness: r('Roughness', 0, 1, 0.01),
+    metalness: r('Metalness', 0, 1, 0.01, { showIf: (p) => !p.unlit }),
+    roughness: r('Roughness', 0, 1, 0.01, { showIf: (p) => !p.unlit, hint: 'Low = shiny. Shiny dark colours reflect the lights and look grey.' }),
     opacity: r('Opacity', 0, 1, 0.01),
-    envMapIntensity: r('Reflection strength', 0, 3, 0.01),
+    envMapIntensity: r('Reflection strength', 0, 3, 0.01, { showIf: (p) => !p.unlit, hint: 'Set to 0 for a deep, non-reflective colour' }),
   },
   glass: {
     transmission: r('Transmission (glass)', 0, 1, 0.01),

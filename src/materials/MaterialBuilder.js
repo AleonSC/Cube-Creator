@@ -9,6 +9,9 @@ export class MaterialBuilder {
   constructor() {
     this.main = new THREE.MeshPhysicalMaterial({ name: 'CubeSurface' });
     this.grout = new THREE.MeshStandardMaterial({ name: 'CubeGrout' });
+    // unlit variants: exact colours, no lighting (glTF KHR_materials_unlit)
+    this.unlitMain = new THREE.MeshBasicMaterial({ name: 'CubeSurface' });
+    this.unlitGrout = new THREE.MeshBasicMaterial({ name: 'CubeGrout' });
     this.signature = '';
   }
 
@@ -70,7 +73,18 @@ export class MaterialBuilder {
       this.grout.needsUpdate = true;
       this.signature = sig;
     }
+    if (m.unlit) return this.updateUnlit(state, mat);
     return { main: mat, grout: this.grout };
+  }
+
+  updateUnlit(state, physical) {
+    const u = this.unlitMain;
+    for (const k of ['map', 'opacity', 'transparent', 'depthWrite', 'side', 'wireframe', 'vertexColors']) u[k] = physical[k];
+    u.color.copy(physical.color);
+    this.unlitGrout.color.set(state.grout.color);
+    u.needsUpdate = true;
+    this.unlitGrout.needsUpdate = true;
+    return { main: u, grout: this.unlitGrout };
   }
 
   /** Per-frame animation hooks: emissive pulse/flicker + texture scrolling. */
@@ -91,5 +105,7 @@ export class MaterialBuilder {
   dispose() {
     this.main.dispose();
     this.grout.dispose();
+    this.unlitMain.dispose();
+    this.unlitGrout.dispose();
   }
 }

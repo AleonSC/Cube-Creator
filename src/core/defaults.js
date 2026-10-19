@@ -12,6 +12,7 @@ export const DEFAULT_STATE = {
   shading: 'auto', // auto | flat | smooth
   modifiers: [], // [{ uid, type, enabled, params }]
   material: {
+    unlit: false, // flat exact colour, ignores lights (exports as glTF unlit)
     color: '#ffffff',
     metalness: 0.1,
     roughness: 0.35,

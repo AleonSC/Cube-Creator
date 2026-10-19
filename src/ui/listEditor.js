@@ -56,7 +56,7 @@ export function listEditor(store, opts) {
       };
       const btn = (icon, title, fn) => el('button', { class: 'icon-btn sm', title, type: 'button', html: ICONS[icon], onClick: (e) => (e.stopPropagation(), fn()) });
       const isCollapsed = collapsed.has(item.uid);
-      const title = el('span', { class: 'item-title' }, opts.titleOf(item));
+      const title = el('span', { class: 'item-title', title: isCollapsed ? 'Click to show settings' : 'Click to hide settings' }, el('span', { class: 'chev' }, isCollapsed ? '▸' : '▾'), opts.titleOf(item));
       const head = el(
         'div',
         { class: 'item-head', onClick: () => (isCollapsed ? collapsed.delete(item.uid) : collapsed.add(item.uid), render()) },
