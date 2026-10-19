@@ -1,0 +1,81 @@
+# Cube Creator
+
+A browser app for designing custom 3D **clicker cubes** — tessellated polygons, glass,
+lava, fire, water, air and dozens more looks — with glow, 3D effects, particles and click
+feedback, then exporting them to **Unity** and **Blender**.
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # static site in dist/ (host anywhere)
+```
+
+## Features
+
+| Area | What you get |
+| --- | --- |
+| **Shapes** | Tessellated cube (11 tilings: squares, bricks, triangles, hexagons, rhombille, diamonds, octagon+square, shards, Voronoi, Mondrian, dominoes; flat/bevel/pyramid/picture-frame tiles, gaps, depth, height and colour variation), cube, rounded cube, pixel/voxel cube, sphere, geodesic sphere, d4/d8/d12/d20, prism, capsule, torus, torus knot, brilliant-cut gem, crystal cluster, extruded tokens (coin, star, heart, gear, cross, lightning bolt) |
+| **Size & modifiers** | Per-axis size + scale, flat/smooth shading, stackable modifiers: subdivide, twist, taper, bend, spherify, noise, melt/drip, wave, low-poly jitter, squash/stretch |
+| **Materials** | Full PBR: colour, metal, roughness, opacity, glass transmission, IOR, thickness, dispersion, absorption colour, clearcoat, iridescence, sheen, specular; separate “grout” material between tiles (with its own glow, e.g. lava cracks) |
+| **Surfaces** | 18 procedural patterns (clouds, marble, cells, lava cracks, flames, caustics, lightning, galaxy, circuit, hex grid, stripes, checker, pixel art, bricks, wood, dragon scales…) with 3-colour/rainbow ramps, pixelation, bump, and per-pattern glow. They are **baked into real textures**, so they export intact |
+| **Glow & FX** | Emission colour/intensity, bloom, pixelated view; effects: toon outline, glowing edges, fresnel aura, halo, orbit rings, satellites, inner glowing core + light, lightning arcs, pedestal |
+| **Particles** | Unlimited layers from 25 recipes (embers, flames, sparks, smoke, steam, bubbles, rain, snow, wind, tornado, magic dust, fireflies, stardust, pixel bits, confetti, hearts, coins…), every parameter editable |
+| **Animation & clicker** | Spin, tumble, wobble, bob, pulse, glow pulse/flicker, texture scroll; click squash, particle burst, counter and floating “+1” |
+| **Presets** | 42 one-click looks: glass, frosted glass, gems, water, ocean, ice, lava, magma, fire, soul fire, sun, air, cloud, storm, stone, grass block, nature, wood, marble, moon, gold, chrome, copper, dragon scales, neon, hologram, cyber circuit, plasma, galaxy, void, arcane, pearl, slime, candy, rainbow, toon, retro pixel, coin box |
+| **Workflow** | Undo/redo, autosave, save/load `.cube.json`, “Random” button |
+
+## Exporting
+
+| Target | Export | Notes |
+| --- | --- | --- |
+| **Unity** | *Unity package (.zip)* | `.glb` (import with [glTFast](https://docs.unity3d.com/Packages/com.unity.cloud.gltfast@latest), `com.unity.cloud.gltfast`) **plus** an OBJ fallback, particle sprites, a config JSON and C# scripts. Add `CubeCreatorCube` to the model and assign the JSON: idle animation, glow pulse, texture scroll, particle systems and click squash/burst are rebuilt at runtime, with an `onClicked(int)` event for your clicker logic. See the bundle’s README |
+| **Blender** | *Blender bundle (.zip)* | `.glb` with a baked *Idle* animation + `setup_blender.py`, which imports it and sets up EEVEE, bloom, world, camera, lights and particle systems. Or just *File → Import → glTF 2.0* |
+| Anything else | `.glb`, `.gltf`, OBJ+MTL, STL (3D printing), USDZ (Apple AR) | |
+| 2D games / store art | PNG render, turntable sprite sheet | Transparent backgrounds supported |
+
+Exported models are in metres (1 unit = 1 m), Y-up, with PBR materials. Viewer-only
+extras (particles, aura shader, halo sprite) do not go into the model files; the engine
+bundles recreate the particles natively instead.
+
+## Architecture (built to be extended)
+
+Everything extensible is a **registry** (`src/registries.js`). A feature module imports a
+registry and calls `.register({...})`. The UI is **generated from param schemas**, so a
+new feature gets sliders, colour pickers and dropdowns automatically, and it is saved,
+undone, loaded and exported with no extra work.
+
+```
+src/
+  registries.js          shapes, modifiers, patterns, presets, effects, particlePresets, particleSprites, exporters
+  core/                  Registry, Store (state + undo/redo + autosave), schema helpers, defaults, noise, seeded RNG
+  shapes/                geometry generators (tessellated.js + tilings.js, primitives, voxel, extruded)
+  modifiers/             stackable deformers
+  surface/               procedural patterns + TextureBuilder (bakes colour/emissive/normal maps)
+  materials/             MaterialBuilder (PBR, grout, glow pulse, texture scroll)
+  effects/               attached 3D effects
+  particles/             data-driven emitter, sprites, recipes
+  presets/               one-click looks
+  cube/                  CubeAssembler: builds and animates the cube from state
+  viewer/                renderer, camera, lights, reflection environments, bloom/pixel post
+  export/                exporters, Unity/Blender bundles, C#/Python templates
+  ui/                    schema-driven controls, list editor, sidebar panels
+```
+
+The design is plain JSON (`src/core/defaults.js`) — that is what gets saved, undone and
+handed to the exporters.
+
+### Recipes for adding features
+
+- **Shape**: add `src/shapes/myShape.js` with
+  `shapes.register({ id, label, category, params: {...}, build(params) { return new THREE.BufferGeometry() } })`,
+  then import it in `src/shapes/index.js`. Geometry is auto-centred and scaled to a unit cube.
+  Return material groups `0` (surface) / `1` (grout) and set `usesGrout: true` to get a grout material.
+- **Tiling** for the tessellated cube: add an entry to `TILINGS` in `src/shapes/tilings.js` that returns convex polygons in `[-0.5, 0.5]²`.
+- **Modifier**: `modifiers.register({ id, label, params, deform(vec3, params) })` (per vertex) or `apply(geometry, params)`.
+- **Surface pattern**: `patterns.register({ id, label, category, params, sample(u, v, params) { return { t, e, h } } })` — colour-ramp position, glow mask and height in 0..1.
+- **Preset look**: add an entry to `src/presets/elements.js` (or a new file imported from `src/presets/index.js`).
+- **3D effect**: `effects.register({ id, label, params, create(ctx, params) { return { object, attach: 'mesh' | 'pivot' | 'world', update?, dispose? } } })`. Set `object.userData.noExport = true` for viewer-only objects.
+- **Particle recipe / sprite**: add to `src/particles/presets.js` / `particleSprites.register({ id, label, draw(ctx2d, size) })`.
+- **Exporter**: `exporters.register({ id, label, category, ext, description, params, run(app, options) => Blob })`.
+- **Sidebar tab**: create `src/ui/panels/myPanel.js` (`{ id, label, icon, render(app) }`) and list it in `src/ui/panels/index.js`.
+- **New design-state field**: add it to `DEFAULT_STATE` (older saves are filled in by `migrate()`), then route it in `App.markDirty` (`src/app.js`).
