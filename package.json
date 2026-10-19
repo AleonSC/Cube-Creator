@@ -5,15 +5,18 @@
   "description": "Browser app for designing custom 3D clicker cubes and exporting them to Unity and Blender.",
   "type": "module",
   "scripts": {
+    "start": "vite --open",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:single": "vite build --mode single && node scripts/finish-single.mjs",
+    "preview": "vite preview --open"
   },
   "dependencies": {
     "fflate": "^0.8.2",
     "three": "^0.180.0"
   },
   "devDependencies": {
-    "vite": "^7.1.0"
+    "vite": "^7.1.0",
+    "vite-plugin-singlefile": "^2.3.4"
   }
 }

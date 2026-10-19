@@ -4,10 +4,24 @@ A browser app for designing custom 3D **clicker cubes** — tessellated polygons
 lava, fire, water, air and dozens more looks — with glow, 3D effects, particles and click
 feedback, then exporting them to **Unity** and **Blender**.
 
+## Quick start
+
+**Just use it:** download [`Cube-Creator.html`](Cube-Creator.html) and double-click it.
+It opens in your browser. No install, no internet needed, and every export works.
+(On GitHub: open the file → *Download raw file*.)
+
+**Put it online:** in this repo's *Settings → Pages*, set *Source* to *GitHub Actions*.
+Every push to `main` then publishes the app at `https://<your-user>.github.io/<repo>/`.
+
+**Edit the code (live reload):** install [Node.js](https://nodejs.org), then double-click
+`Start Cube Creator (dev).bat` (Windows) or run `./start.sh` (macOS/Linux). That is the
+same as:
+
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # static site in dist/ (host anywhere)
+npm start               # opens http://localhost:5173 with live reload
+npm run build:single    # rebuilds Cube-Creator.html after code changes
+npm run build           # static site in dist/ (what GitHub Pages serves)
 ```
 
 ## Features
