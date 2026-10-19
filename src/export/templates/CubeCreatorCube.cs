@@ -6,6 +6,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 namespace CubeCreator
 {
@@ -19,7 +22,7 @@ namespace CubeCreator
         public bool animate = true;
         public bool buildParticles = true;
         public bool applyGlow = true;
-        [Tooltip("Adds a BoxCollider and reacts to OnMouseDown. With the new Input System only, call Click() yourself.")]
+        [Tooltip("Adds a BoxCollider and reacts to mouse clicks / taps (old or new Input System).")]
         public bool clickable = true;
         public ClickEvent onClicked = new ClickEvent();
         public int clicks;
@@ -133,6 +136,7 @@ namespace CubeCreator
 
         void Update()
         {
+            PollPointer();
             if (cfg == null || cfg.animation == null || !animate) return;
             var a = cfg.animation;
             float dt = Time.deltaTime;
@@ -164,6 +168,22 @@ namespace CubeCreator
                     foreach (var prop in TextureProps)
                         if (m.HasProperty(prop)) m.SetTextureOffset(prop, offset);
             }
+        }
+
+        // OnMouseDown only works with the old Input Manager. When a project uses the
+        // new Input System exclusively, raycast clicks / taps ourselves.
+        void PollPointer()
+        {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            if (!clickable) return;
+            Vector2 pos;
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) pos = Mouse.current.position.ReadValue();
+            else if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame) pos = Touchscreen.current.primaryTouch.position.ReadValue();
+            else return;
+            var cam = Camera.main;
+            if (cam == null) return;
+            if (Physics.Raycast(cam.ScreenPointToRay(pos), out var hit) && hit.collider.transform.IsChildOf(transform)) Click();
+#endif
         }
 
         static Transform FindDeep(Transform t, string n)

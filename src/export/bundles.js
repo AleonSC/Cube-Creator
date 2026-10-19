@@ -8,6 +8,7 @@ import { slug } from './prepare.js';
 import configCs from './templates/CubeCreatorConfig.cs?raw';
 import cubeCs from './templates/CubeCreatorCube.cs?raw';
 import particlesCs from './templates/CubeCreatorParticles.cs?raw';
+import setupCs from './templates/CubeCreatorSetup.cs?raw';
 import blenderPy from './templates/setup_blender.py?raw';
 
 /** Engine-neutral description of runtime behaviour (animation, glow, particles). */
@@ -58,6 +59,7 @@ export async function exportUnityBundle(app, { includeEffects = true, includeObj
   files[`${root}/Scripts/CubeCreatorConfig.cs`] = configCs;
   files[`${root}/Scripts/CubeCreatorCube.cs`] = cubeCs;
   files[`${root}/Scripts/CubeCreatorParticles.cs`] = particlesCs;
+  files[`${root}/Scripts/Editor/CubeCreatorSetup.cs`] = setupCs;
   for (const id of usedSprites(config)) files[`${root}/Resources/CubeCreatorSprites/${id}.png`] = dataUrlToBytes(spriteDataURL(id));
   files[`${root}/README.md`] = unityReadme(name, root);
   return makeZip(files);
@@ -81,23 +83,23 @@ function unityReadme(name, root) {
   return `# ${name} — Cube Creator Unity bundle
 
 ## Import
-1. Copy the \`${root}\` folder into your project's \`Assets/\`.
-2. **Recommended:** install **glTFast** (Package Manager → \`+\` → *Add package by name* → \`com.unity.cloud.gltfast\`).
-   \`Models/${name}.glb\` then imports as a prefab with PBR materials, glow (emission),
-   transmission/glass, vertex colours and textures.
-   *No glTFast?* Use \`Models/OBJ/${name}.obj\` instead (Unity imports OBJ natively; the
-   script restores glow, but glass/transmission must be set up manually).
-3. Drag the model into your scene.
-4. Add the **CubeCreatorCube** component to the model's root object and assign
-   \`CubeCreatorConfig_${name}.json\` to its **Config** field.
-5. Press Play: idle spin/bob, glow pulse, texture scroll, particle layers and the
-   click squash + particle burst are recreated.
+1. **Install glTFast** once per project: Package Manager → \`+\` → *Add package by name* →
+   \`com.unity.cloud.gltfast\`. (Without it, the included OBJ model is used instead; the
+   glow still works, but glass/transparency must be set up by hand.)
+2. Drag the \`${root}\` folder into your project's **Assets**.
+3. In the top menu choose **Cube Creator → Set Up Cube**. It adds the cube to the open
+   scene, attaches **CubeCreatorCube** with this config, and (in URP) adds a Bloom volume
+   so glow shows. To set up a cube that's already in your scene, select it first.
+4. Press **Play** and click the cube.
+
+Manual alternative: drag \`Models/${name}.glb\` into the scene, add the **CubeCreatorCube**
+component to its top object and assign \`CubeCreatorConfig_${name}.json\` to **Config**.
 
 ## Clicker hooks
 - \`onClicked (int clicks)\` UnityEvent in the inspector.
 - \`CubeCreatorCube.AnyCubeClicked\` static C# event.
-- Call \`cube.Click()\` from your own input code (needed if your project uses only the
-  new Input System, where \`OnMouseDown\` is disabled).
+- Call \`cube.Click()\` to trigger it from your own code. Mouse clicks and taps already
+  work with both the old Input Manager and the new Input System.
 
 ## Notes
 - Works with URP (uses *Universal Render Pipeline/Particles/Unlit*) and the Built-in
