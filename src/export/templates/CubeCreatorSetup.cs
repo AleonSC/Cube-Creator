@@ -27,7 +27,7 @@ namespace CubeCreator.EditorTools
             if (config == null)
             {
                 EditorUtility.DisplayDialog("Cube Creator",
-                    "Couldn't find a CubeCreatorConfig_*.json for this model.\n\nKeep the exported CubeCreator_<name> folder together inside Assets, then try again.", "OK");
+                    "Couldn't find a CubeCreatorConfig_*.json for this model.\n\nKeep each cube's CubeCreator_<name> folder together inside Assets/CubeCreator/Cubes, then try again.", "OK");
                 return;
             }
 
@@ -55,7 +55,7 @@ namespace CubeCreator.EditorTools
         public static void OpenReadme()
         {
             string guid = AssetDatabase.FindAssets("README t:TextAsset")
-                .FirstOrDefault(g => AssetDatabase.GUIDToAssetPath(g).Contains("CubeCreator_"));
+                .FirstOrDefault(g => AssetDatabase.GUIDToAssetPath(g).Replace('\\', '/').EndsWith("CubeCreator/README.md"));
             if (guid == null) { EditorUtility.DisplayDialog("Cube Creator", "No exported README found.", "OK"); return; }
             AssetDatabase.OpenAsset(AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath(guid)));
         }
@@ -119,7 +119,7 @@ namespace CubeCreator.EditorTools
             if (configs.Length == 0)
             {
                 EditorUtility.DisplayDialog("Cube Creator",
-                    "No exported cubes found.\n\nUnzip the Unity export and drag its CubeCreator_<name> folder into Assets first.", "OK");
+                    "No exported cubes found.\n\nImport a Cube Creator .unitypackage first (double-click it, or Assets > Import Package > Custom Package).", "OK");
                 return null;
             }
             if (configs.Length > 1)

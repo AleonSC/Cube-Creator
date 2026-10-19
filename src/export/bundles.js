@@ -1,9 +1,10 @@
 import { withDefaults } from '../core/schema.js';
-import { particlePresets } from '../registries.js';
+import { particlePresets, particleSprites } from '../registries.js';
 import { EMITTER_SCHEMA } from '../particles/index.js';
 import { spriteDataURL } from '../particles/sprites.js';
 import { exportGLTF, exportOBJ } from './models.js';
 import { makeZip } from './zip.js';
+import { makeUnityPackage } from './unitypackage.js';
 import { slug } from './prepare.js';
 import configCs from './templates/CubeCreatorConfig.cs?raw';
 import cubeCs from './templates/CubeCreatorCube.cs?raw';
@@ -34,35 +35,37 @@ export function runtimeConfig(app) {
   };
 }
 
-function usedSprites(config) {
-  const ids = new Set(config.particles.map((p) => p.sprite));
-  if (config.clicker.burst) ids.add(config.clicker.burst.sprite);
-  return [...ids];
-}
-
 const dataUrlToBytes = (url) => Uint8Array.from(atob(url.split(',')[1]), (c) => c.charCodeAt(0));
 
-export async function exportUnityBundle(app, { includeEffects = true, includeObj = true } = {}) {
+/**
+ * Unity export. Shared runtime (scripts, sprites) lives at fixed paths under
+ * Assets/CubeCreator so every cube reuses one copy; each cube gets its own
+ * folder under Assets/CubeCreator/Cubes. As a .unitypackage the shared files
+ * keep the same GUIDs, so importing more cubes updates instead of duplicating.
+ */
+export async function exportUnityBundle(app, { includeEffects = true, includeObj = true, format = 'unitypackage' } = {}) {
   const name = slug(app.store.get('name'));
-  const root = `CubeCreator_${name}`;
+  const base = 'Assets/CubeCreator';
+  const cube = `${base}/Cubes/CubeCreator_${name}`;
   const config = runtimeConfig(app);
   const files = {};
   // the C# component drives the idle animation, so don't bake a clip into the model
-  files[`${root}/Models/${name}.glb`] = await exportGLTF(app, { binary: true, includeEffects, bakeAnimation: false });
+  files[`${cube}/Models/${name}.glb`] = await exportGLTF(app, { binary: true, includeEffects, bakeAnimation: false });
   if (includeObj) {
     const obj = await exportOBJ(app, { includeEffects, baseName: name });
-    files[`${root}/Models/OBJ/${name}.obj`] = obj.obj;
-    files[`${root}/Models/OBJ/${name}.mtl`] = obj.mtl;
-    for (const [file, blob] of Object.entries(obj.textures)) files[`${root}/Models/OBJ/${file}`] = blob;
+    files[`${cube}/Models/OBJ/${name}.obj`] = obj.obj;
+    files[`${cube}/Models/OBJ/${name}.mtl`] = obj.mtl;
+    for (const [file, blob] of Object.entries(obj.textures)) files[`${cube}/Models/OBJ/${file}`] = blob;
   }
-  files[`${root}/CubeCreatorConfig_${name}.json`] = JSON.stringify(config, null, 2);
-  files[`${root}/Scripts/CubeCreatorConfig.cs`] = configCs;
-  files[`${root}/Scripts/CubeCreatorCube.cs`] = cubeCs;
-  files[`${root}/Scripts/CubeCreatorParticles.cs`] = particlesCs;
-  files[`${root}/Scripts/Editor/CubeCreatorSetup.cs`] = setupCs;
-  for (const id of usedSprites(config)) files[`${root}/Resources/CubeCreatorSprites/${id}.png`] = dataUrlToBytes(spriteDataURL(id));
-  files[`${root}/README.md`] = unityReadme(name, root);
-  return makeZip(files);
+  files[`${cube}/CubeCreatorConfig_${name}.json`] = JSON.stringify(config, null, 2);
+  files[`${base}/Scripts/CubeCreatorConfig.cs`] = configCs;
+  files[`${base}/Scripts/CubeCreatorCube.cs`] = cubeCs;
+  files[`${base}/Scripts/CubeCreatorParticles.cs`] = particlesCs;
+  files[`${base}/Scripts/Editor/CubeCreatorSetup.cs`] = setupCs;
+  // ship every sprite so cubes imported later never miss one
+  for (const s of particleSprites.list()) files[`${base}/Resources/CubeCreatorSprites/${s.id}.png`] = dataUrlToBytes(spriteDataURL(s.id));
+  files[`${base}/README.md`] = unityReadme();
+  return format === 'zip' ? makeZip(files) : makeUnityPackage(files);
 }
 
 export async function exportBlenderBundle(app, { includeEffects = true, bakeAnimation = true } = {}) {
@@ -79,21 +82,28 @@ export async function exportBlenderBundle(app, { includeEffects = true, bakeAnim
   });
 }
 
-function unityReadme(name, root) {
-  return `# ${name} — Cube Creator Unity bundle
+function unityReadme() {
+  return `# Cube Creator for Unity
 
 ## Import
 1. **Install glTFast** once per project: Package Manager → \`+\` → *Add package by name* →
-   \`com.unity.cloud.gltfast\`. (Without it, the included OBJ model is used instead; the
-   glow still works, but glass/transparency must be set up by hand.)
-2. Drag the \`${root}\` folder into your project's **Assets**.
-3. In the top menu choose **Cube Creator → Set Up Cube**. It adds the cube to the open
-   scene, attaches **CubeCreatorCube** with this config, and (in URP) adds a Bloom volume
-   so glow shows. To set up a cube that's already in your scene, select it first.
+   \`com.unity.cloud.gltfast\`. If it shows compile errors, pick an older version in its
+   *Version History* tab — or skip glTFast entirely: the OBJ copy of each cube is used
+   instead (glow still works; glass/transparency must be set by hand).
+2. **Import the cube:** double-click the \`.unitypackage\` (or *Assets → Import Package →
+   Custom Package…*) and click **Import**. Every cube shares one copy of the scripts in
+   \`Assets/CubeCreator/Scripts\`; each cube gets its own folder in \`Assets/CubeCreator/Cubes\`.
+   Importing more cubes later just updates the shared scripts — no duplicates.
+   (Zip export instead? Extract it into your project folder — the one that contains
+   \`Assets\` — and let it merge/replace files.)
+3. **Cube Creator → Set Up Cube** (top menu). With several cubes, first select the one you
+   want (its \`.glb\` in the Project window, or the model in your scene). It adds the cube to
+   the scene, attaches **CubeCreatorCube** with its config and, in URP, adds a Bloom volume.
 4. Press **Play** and click the cube.
 
-Manual alternative: drag \`Models/${name}.glb\` into the scene, add the **CubeCreatorCube**
-component to its top object and assign \`CubeCreatorConfig_${name}.json\` to **Config**.
+Manual alternative: drag \`Cubes/CubeCreator_<name>/Models/<name>.glb\` into the scene, add
+the **CubeCreatorCube** component to its top object and assign its
+\`CubeCreatorConfig_<name>.json\` to **Config**.
 
 ## Clicker hooks
 - \`onClicked (int clicks)\` UnityEvent in the inspector.
@@ -105,12 +115,11 @@ component to its top object and assign \`CubeCreatorConfig_${name}.json\` to **C
 - Works with URP (uses *Universal Render Pipeline/Particles/Unlit*) and the Built-in
   pipeline (legacy particle shaders). If particles render pink in a player build, add
   the shader to *Project Settings → Graphics → Always Included Shaders*.
-- For glow, enable **Bloom** (URP Volume → Bloom, or Post Processing stack). Suggested
-  threshold 0.8–1.0.
-- Particle sprites live in \`Resources/CubeCreatorSprites\`.
-- Particle settings are an approximation of the web preview mapped onto Unity's
-  ParticleSystem modules — tweak them freely after Play by inspecting the generated
-  \`Particles_*\` children (or copy them in Play mode and paste after).
+- Glow needs **Bloom** (Set Up Cube adds it in URP; threshold ~0.9).
+- Particle settings approximate the web preview using Unity's ParticleSystem modules —
+  tweak the generated \`Particles_*\` children freely.
+- Upgrading from an older Cube Creator export that had a \`Scripts\` folder inside each
+  cube folder? Delete those per-cube \`Scripts\` folders, then import this package.
 `;
 }
 

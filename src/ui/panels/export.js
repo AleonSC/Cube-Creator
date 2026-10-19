@@ -31,7 +31,8 @@ export default {
           btn.textContent = 'Exporting…';
           try {
             const blob = await x.run(app, { ...values });
-            download(blob, `${slug(app.store.get('name'))}${x.ext}`);
+            const ext = typeof x.ext === 'function' ? x.ext(values) : x.ext;
+            download(blob, `${slug(app.store.get('name'))}${ext}`);
             app.ui.toast(`Exported ${x.label}`);
           } catch (err) {
             console.error(err);

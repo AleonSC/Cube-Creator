@@ -42,7 +42,7 @@ npm run build           # static site in dist/ (what GitHub Pages serves)
 
 | Target | Export | Notes |
 | --- | --- | --- |
-| **Unity** | *Unity package (.zip)* | `.glb` (import with [glTFast](https://docs.unity3d.com/Packages/com.unity.cloud.gltfast@latest), `com.unity.cloud.gltfast`) **plus** an OBJ fallback, particle sprites, a config JSON and C# scripts. Add `CubeCreatorCube` to the model and assign the JSON: idle animation, glow pulse, texture scroll, particle systems and click squash/burst are rebuilt at runtime, with an `onClicked(int)` event for your clicker logic. See the bundle’s README |
+| **Unity** | *Unity package (.unitypackage)* | Double-click to import, then **Cube Creator → Set Up Cube** in Unity. Contains the `.glb` (needs [glTFast](https://docs.unity3d.com/Packages/com.unity.cloud.gltfast@latest), `com.unity.cloud.gltfast`), an OBJ fallback, and shared C# scripts in `Assets/CubeCreator/Scripts` that recreate idle animation, glow pulse, texture scroll, particles and click squash/burst, with an `onClicked(int)` event. Every cube shares one copy of the scripts, so you can import as many cubes as you like |
 | **Blender** | *Blender bundle (.zip)* | `.glb` with a baked *Idle* animation + `setup_blender.py`, which imports it and sets up EEVEE, bloom, world, camera, lights and particle systems. Or just *File → Import → glTF 2.0* |
 | Anything else | `.glb`, `.gltf`, OBJ+MTL, STL (3D printing), USDZ (Apple AR) | |
 | 2D games / store art | PNG render, turntable sprite sheet | Transparent backgrounds supported |

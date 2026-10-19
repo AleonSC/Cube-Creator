@@ -13,12 +13,16 @@ const effects = { type: 'bool', label: 'Include 3D effects (outline, rings, core
 exporters.registerAll([
   {
     id: 'unity',
-    label: 'Unity package (.zip)',
+    label: 'Unity package',
     category: 'Game engines',
-    ext: '_unity.zip',
+    ext: (o) => (o.format === 'zip' ? '_unity.zip' : '.unitypackage'),
     icon: 'unity',
-    description: 'GLB + OBJ model, particle sprites and C# scripts that recreate the animation, glow, particles and click feedback.',
-    params: { includeEffects: effects, includeObj: { type: 'bool', label: 'Include OBJ fallback (no glTFast needed)', default: true } },
+    description: 'Double-click to import. GLB + OBJ model, particle sprites and shared C# scripts that recreate the animation, glow, particles and click feedback. Then use Cube Creator → Set Up Cube in Unity.',
+    params: {
+      format: { type: 'select', label: 'Format', options: [{ value: 'unitypackage', label: '.unitypackage (recommended)' }, { value: 'zip', label: '.zip (extract into project folder)' }], default: 'unitypackage' },
+      includeEffects: effects,
+      includeObj: { type: 'bool', label: 'Include OBJ fallback (no glTFast needed)', default: true },
+    },
     run: (app, o) => exportUnityBundle(app, o),
   },
   {
