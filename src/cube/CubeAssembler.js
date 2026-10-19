@@ -43,6 +43,10 @@ export class CubeAssembler {
     const shape = shapes.get(state.shape.type) || shapes.get('cube');
     const params = withDefaults(shape.params, state.shape.params[shape.id]);
     let g = shape.build(params);
+    // Built-in three.js geometries (box, cylinder, extrude...) tag faces with their own
+    // material groups. Only grout-aware shapes use groups (0 = surface, 1 = grout);
+    // anything else must render as one surface or faces without a material vanish.
+    if (!shape.usesGrout) g.clearGroups();
 
     // normalise into a unit cube centred on the origin
     g.computeBoundingBox();

@@ -74,7 +74,7 @@ export const DEFAULT_STATE = {
     exposure: 1,
     ground: true,
     shadowOpacity: 0.35,
-    keyLight: 2.2,
+    keyLight: 1.8,
     keyColor: '#ffffff',
     rimLight: 1.2,
     rimColor: '#7aa2ff',

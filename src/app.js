@@ -112,7 +112,12 @@ export class App {
 
   // ------------------------------------------------------------- commands
   newDesign() {
-    this.store.replace(migrate(DEFAULT_STATE));
+    const fresh = migrate(DEFAULT_STATE);
+    // the default material is a white tint (so preset textures show true colours);
+    // give a blank design a visible starting colour instead
+    fresh.material.color = '#6f7dff';
+    fresh.material.roughness = 0.3;
+    this.store.replace(fresh);
     this.ui.toast('New design');
   }
 
