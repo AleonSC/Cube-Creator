@@ -29,6 +29,7 @@ npm run build           # static site in dist/ (what GitHub Pages serves)
 | Area | What you get |
 | --- | --- |
 | **Shapes** | Tessellated cube (11 tilings: squares, bricks, triangles, hexagons, rhombille, diamonds, octagon+square, shards, Voronoi, Mondrian, dominoes; flat/bevel/pyramid/picture-frame tiles, gaps, depth, height and colour variation), cube, rounded cube, pixel/voxel cube, sphere, geodesic sphere, d4/d8/d12/d20, prism, capsule, torus, torus knot, brilliant-cut gem, crystal cluster, extruded tokens (coin, star, heart, gear, cross, lightning bolt) |
+| **Sculpt & paint** | Freeze any cube into a dense mesh (50k–1M triangles) and shape it by hand: draw, carve, inflate, grab/drag/stretch, smooth, flatten, pinch; paint colour and glow onto the surface. Mirror symmetry on X/Y/Z, size/strength/hardness, per-stroke undo, Ctrl to invert, Shift to smooth, `[` `]` to resize. Sculpts autosave and are embedded in saved designs; painted glow exports as emissive materials |
 | **Size & modifiers** | Per-axis size + scale, flat/smooth shading, stackable modifiers: subdivide, twist, taper, bend, spherify, noise, melt/drip, wave, low-poly jitter, squash/stretch |
 | **Materials** | Full PBR: colour, metal, roughness, opacity, glass transmission, IOR, thickness, dispersion, absorption colour, clearcoat, iridescence, sheen, specular; separate “grout” material between tiles (with its own glow, e.g. lava cracks) |
 | **Surfaces** | 18 procedural patterns (clouds, marble, cells, lava cracks, flames, caustics, lightning, galaxy, circuit, hex grid, stripes, checker, pixel art, bricks, wood, dragon scales…) with 3-colour/rainbow ramps, pixelation, bump, and per-pattern glow. They are **baked into real textures**, so they export intact |
@@ -72,6 +73,7 @@ src/
   cube/                  CubeAssembler: builds and animates the cube from state
   viewer/                renderer, camera, lights, reflection environments, bloom/pixel post
   export/                exporters, Unity/Blender bundles, C#/Python templates
+  sculpt/                SculptMesh (welded dense mesh + BVH), brushes, stroke controller, autosave
   ui/                    schema-driven controls, list editor, sidebar panels
 ```
 
@@ -91,5 +93,6 @@ handed to the exporters.
 - **3D effect**: `effects.register({ id, label, params, create(ctx, params) { return { object, attach: 'mesh' | 'pivot' | 'world', update?, dispose? } } })`. Set `object.userData.noExport = true` for viewer-only objects.
 - **Particle recipe / sprite**: add to `src/particles/presets.js` / `particleSprites.register({ id, label, draw(ctx2d, size) })`.
 - **Exporter**: `exporters.register({ id, label, category, ext, description, params, run(app, options) => Blob })`.
+- **Sculpt / paint brush**: `brushes.register({ id, label, kind: 'sculpt' | 'paint', key, hint, dab(ctx) })` in `src/sculpt/brushes.js` — `ctx` gives the touched points, falloff `weight(u)`, brush centre/normal, strength, radius, invert and colour.
 - **Sidebar tab**: create `src/ui/panels/myPanel.js` (`{ id, label, icon, render(app) }`) and list it in `src/ui/panels/index.js`.
 - **New design-state field**: add it to `DEFAULT_STATE` (older saves are filled in by `migrate()`), then route it in `App.markDirty` (`src/app.js`).

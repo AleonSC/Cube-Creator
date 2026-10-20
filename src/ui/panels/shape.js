@@ -13,6 +13,23 @@ export default {
     const { store } = app;
     const root = el('div');
 
+    if (app.sculpt?.active) {
+      const toSculpt = el('button', { class: 'btn primary', type: 'button', onClick: () => app.ui.show('sculpt') }, 'Open Sculpt');
+      const discard = el('button', { class: 'btn danger', type: 'button' }, 'Discard sculpt');
+      discard.addEventListener('click', () => {
+        if (!confirm('Discard all sculpting and painting and go back to the editable shape?')) return;
+        app.sculpt.discard();
+        app.ui.rerender();
+      });
+      root.append(
+        el('div', { class: 'notice' },
+          el('p', {}, 'This cube is sculpted, so its shape, size and modifiers are frozen. Discard the sculpt to edit them again (this removes your sculpting and painting).'),
+          el('div', { class: 'row gap' }, toSculpt, discard)),
+        section('Shading', bound(store, '', SHADING_SCHEMA)),
+      );
+      return root;
+    }
+
     // shape picker + params
     const type = store.get('shape.type');
     const picker = el('div', { class: 'chip-grid' });

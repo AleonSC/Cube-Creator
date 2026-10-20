@@ -5,6 +5,7 @@ import * as THREE from 'three';
  * position (works on indexed or non-indexed geometry, ignores uv seams).
  */
 export function smoothNormals(geometry) {
+  if (geometry.userData.sculpt) return geometry; // sculpt meshes keep their own smooth normals
   if (geometry.index) geometry = geometry.toNonIndexed();
   const p = geometry.attributes.position;
   const acc = new Map();

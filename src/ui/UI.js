@@ -24,8 +24,8 @@ export class UI {
       el(
         'div',
         { class: 'actions' },
-        hbtn('undo', 'Undo (Ctrl+Z)', () => app.store.undo()),
-        hbtn('redo', 'Redo (Ctrl+Shift+Z)', () => app.store.redo()),
+        hbtn('undo', 'Undo (Ctrl+Z)', () => app.undo()),
+        hbtn('redo', 'Redo (Ctrl+Shift+Z)', () => app.redo()),
         hbtn('dice', 'Surprise me – random cube', () => app.randomize(), 'Random'),
         hbtn('new', 'New design', () => app.newDesign()),
         hbtn('open', 'Open design (.json)', () => this.fileInput.click()),
@@ -68,16 +68,17 @@ export class UI {
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
-        e.shiftKey ? app.store.redo() : app.store.undo();
+        e.shiftKey ? app.redo() : app.undo();
       } else if (mod && e.key.toLowerCase() === 'y') {
         e.preventDefault();
-        app.store.redo();
+        app.redo();
       }
     });
   }
 
   show(id) {
     this.active = id;
+    this.app.sculpt?.setEditing(id === 'sculpt');
     this.prefs.tab = id;
     savePrefs(this.prefs);
     this.tabs.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.id === id));

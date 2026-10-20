@@ -39,7 +39,8 @@ export class CubeAssembler {
   }
 
   // ---------------------------------------------------------------- geometry
-  buildGeometry(state) {
+  buildGeometry(state, sculpt = null) {
+    if (sculpt) return this.useGeometry(sculpt.geometry);
     const shape = shapes.get(state.shape.type) || shapes.get('cube');
     const params = withDefaults(shape.params, state.shape.params[shape.id]);
     let g = shape.build(params);
@@ -82,25 +83,41 @@ export class CubeAssembler {
     const smooth = state.shading === 'smooth' || (state.shading === 'auto' && (g.userData.smooth ?? shape.smooth));
     g = dropDegenerate(g);
     g = smooth ? smoothNormals(g) : flatNormals(g);
-    g.computeBoundingBox();
-    g.computeBoundingSphere();
-    g.boundingBox.getSize(this.bounds).multiplyScalar(0.5);
 
-    this.mesh.geometry.dispose();
+    this.proceduralGeometry?.dispose();
+    this.proceduralGeometry = g; // kept so a sculpt can be frozen from it
+    this.useGeometry(g);
+  }
+
+  useGeometry(g) {
     this.mesh.geometry = g;
     this.hasGrout = g.groups.some((gr) => gr.materialIndex === 1);
     this.hasVertexColors = !!g.attributes.color;
+    this.refreshSculptBounds();
+  }
+
+  /** Recompute bounds after the geometry changed in place (sculpting). */
+  refreshSculptBounds() {
+    const g = this.mesh.geometry;
+    g.computeBoundingBox();
+    g.computeBoundingSphere();
+    g.boundingBox.getSize(this.bounds).multiplyScalar(0.5);
     this.emitters.forEach((e) => e.setBounds(this.bounds));
     this.burstEmitter?.setBounds(this.bounds);
   }
 
   // ---------------------------------------------------------------- material
-  buildMaterial(state) {
+  buildMaterial(state, sculpt = null) {
     const tex = this.textures.build(state.surface);
     const { main, grout } = this.materials.update(state, tex, {
       vertexColors: this.hasVertexColors,
       flatShading: state.shading === 'flat',
     });
+    if (this.mesh.geometry.userData.sculpt && sculpt) {
+      sculpt.setMaterialColor(new THREE.Color(state.material.color));
+      main.color.setRGB(1, 1, 1);
+    }
+    this.materials.setSculptGlow(state.sculpt?.glow ?? 0, !!this.mesh.geometry.attributes.sculptGlow);
     this.mesh.material = this.hasGrout ? [main, grout] : main;
     this.mesh.castShadow = state.material.transmission < 0.5 && state.material.opacity > 0.5;
   }
@@ -174,8 +191,19 @@ export class CubeAssembler {
   }
 
   // --------------------------------------------------------------- per frame
-  update(state, dt) {
+  update(state, dt, { holdStill = false } = {}) {
     this.time += dt;
+    if (holdStill) {
+      // sculpt mode: keep the cube perfectly still so brushes land where you point
+      this.mesh.rotation.set(0, 0, 0);
+      this.pivot.position.set(0, 0, 0);
+      this.pivot.scale.set(1, 1, 1);
+      this.squash.x = this.squash.v = 0;
+      this.materials.animate(state, this.time);
+      for (const { instance, params } of this.effectInstances) instance.update?.(dt, this.time, params);
+      this.emitters.forEach((e) => e.update(dt));
+      return;
+    }
     const t = this.time;
     const a = state.animation;
     const TAU = Math.PI * 2;

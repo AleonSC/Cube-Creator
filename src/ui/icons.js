@@ -10,6 +10,7 @@ export const ICONS = {
   particles: svg('<circle cx="6" cy="7" r="1.5"/><circle cx="17" cy="5" r="1"/><circle cx="12" cy="12" r="2"/><circle cx="18" cy="15" r="1.5"/><circle cx="7" cy="18" r="1"/>'),
   animation: svg('<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>'),
   scene: svg('<path d="M3 17l5-5 4 4 3-3 6 6"/><circle cx="16" cy="8" r="2"/><rect x="3" y="3" width="18" height="18" rx="2"/>'),
+  sculpt: svg('<path d="M14.5 4.5l5 5L9 20H4v-5z"/><path d="M12.5 6.5l5 5"/>'),
   export: svg('<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>'),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>'),
   redo: svg('<path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>'),

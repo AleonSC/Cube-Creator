@@ -8,6 +8,7 @@ import './effects/index.js';
 import './particles/index.js';
 import './presets/index.js';
 import './export/index.js';
+import './sculpt/brushes.js';
 
 import { App } from './app.js';
 

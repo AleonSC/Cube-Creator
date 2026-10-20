@@ -145,6 +145,6 @@ exporters.registerAll([
     ext: '.cube.json',
     description: 'Save the editable design to load back into Cube Creator later.',
     params: {},
-    run: (app) => new Blob([JSON.stringify(app.store.get(), null, 2)], { type: 'application/json' }),
+    run: (app) => new Blob([JSON.stringify(app.designJSON())], { type: 'application/json' }),
   },
 ]);

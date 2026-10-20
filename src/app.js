@@ -4,6 +4,7 @@ import { DEFAULT_STATE, migrate } from './core/defaults.js';
 import { Viewer } from './viewer/Viewer.js';
 import { CubeAssembler } from './cube/CubeAssembler.js';
 import { UI } from './ui/UI.js';
+import { SculptController } from './sculpt/SculptController.js';
 import { presets, shapes, patterns } from './registries.js';
 import { applyPreset } from './presets/index.js';
 import { tilingOptions } from './shapes/tilings.js';
@@ -29,6 +30,10 @@ export class App {
     this.viewer = new Viewer(this.ui.viewport);
     this.assembler = new CubeAssembler();
     this.viewer.scene.add(this.assembler.root);
+    this.sculpt = new SculptController(this);
+    this.sculpt.setEditing(this.ui.active === 'sculpt');
+    this.ui.rerender();
+    this.sculpt.restore();
 
     this.store.subscribe((paths) => {
       this.markDirty(paths);
@@ -46,6 +51,7 @@ export class App {
       const top = p.split('.')[0];
       if (p === '*') Object.keys(d).forEach((k) => (d[k] = true));
       else if (['shape', 'size', 'modifiers', 'shading'].includes(top)) d.geometry = d.material = d.effects = true;
+      else if (top === 'sculpt') d.geometry = d.material = d.effects = d.particles = true;
       else if (['material', 'glow', 'grout', 'surface'].includes(top)) d.material = true;
       else if (top === 'effects') d.effects = true;
       else if (top === 'particles' || top === 'clicker') d.particles = true;
@@ -57,11 +63,12 @@ export class App {
     const s = this.store.get();
     const d = this.dirty;
     try {
+      const sculpt = s.sculpt.active ? this.sculpt.mesh : null;
       if (d.geometry) {
-        this.assembler.buildGeometry(s);
+        this.assembler.buildGeometry(s, sculpt);
         this.viewer.setGroundLevel(-this.assembler.bounds.y - 0.35);
       }
-      if (d.material) this.assembler.buildMaterial(s);
+      if (d.material) this.assembler.buildMaterial(s, sculpt);
       if (d.effects) this.assembler.buildEffects(s);
       if (d.particles) this.assembler.syncParticles(s);
       if (d.scene) this.viewer.applyScene(s.scene, s.post);
@@ -77,7 +84,7 @@ export class App {
     const dt = Math.min(this.clock.getDelta(), 1 / 20);
     if (this.paused) return;
     if (Object.values(this.dirty).some(Boolean)) this.rebuild();
-    this.assembler.update(this.store.get(), dt);
+    this.assembler.update(this.store.get(), dt, { holdStill: this.sculpt.editing });
     this.viewer.render();
   }
 
@@ -97,7 +104,7 @@ export class App {
       if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
       down = null;
       const s = this.store.get();
-      if (!s.clicker.enabled || !hit(e)) return;
+      if (!s.clicker.enabled || this.sculpt.editing || !hit(e)) return;
       this.assembler.click(s);
       this.clicks++;
       this.ui.setCount(this.clicks);
@@ -106,27 +113,52 @@ export class App {
     });
     canvas.addEventListener('pointermove', (e) => {
       if (e.buttons) return;
+      if (this.sculpt.editing) return void (canvas.style.cursor = 'crosshair');
       canvas.style.cursor = this.store.get('clicker.enabled') && hit(e) ? 'pointer' : '';
     });
   }
 
   // ------------------------------------------------------------- commands
+  /** Undo/redo: brush strokes while sculpting, design changes otherwise. */
+  undo() {
+    if (this.sculpt.editing && this.sculpt.undo()) return;
+    this.store.undo();
+  }
+
+  redo() {
+    if (this.sculpt.editing && this.sculpt.redo()) return;
+    this.store.redo();
+  }
+
+  /** Full design including the sculpted mesh (compressed), for saving to a file. */
+  designJSON() {
+    const data = structuredClone(this.store.get());
+    const sculptData = this.sculpt.serialize();
+    if (sculptData) data.sculptData = sculptData;
+    return data;
+  }
+
   newDesign() {
     const fresh = migrate(DEFAULT_STATE);
     // the default material is a white tint (so preset textures show true colours);
     // give a blank design a visible starting colour instead
     fresh.material.color = '#6f7dff';
     fresh.material.roughness = 0.3;
+    if (this.sculpt.active) this.sculpt.discard();
     this.store.replace(fresh);
     this.ui.toast('New design');
   }
 
   loadDesign(json) {
-    this.store.replace(migrate(json));
+    const { sculptData, ...design } = json;
+    if (sculptData) this.sculpt.load(sculptData);
+    else if (design.sculpt?.active) design.sculpt.active = false; // file has no mesh data
+    this.store.replace(migrate(design));
+    if (sculptData) this.sculpt.persist();
   }
 
   saveDesign() {
-    const blob = new Blob([JSON.stringify(this.store.get(), null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(this.designJSON())], { type: 'application/json' });
     download(blob, `${slug(this.store.get('name'))}.cube.json`);
   }
 

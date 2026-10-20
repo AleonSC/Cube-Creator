@@ -154,7 +154,7 @@ modifiers.registerAll([
 ]);
 
 /** Split each triangle into 4 (non-indexed geometry; interpolates all attributes). */
-function subdivideOnce(g) {
+export function subdivideOnce(g) {
   const names = Object.keys(g.attributes);
   const src = names.map((n) => g.attributes[n]);
   const triCount = g.attributes.position.count / 3;

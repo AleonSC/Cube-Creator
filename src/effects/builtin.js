@@ -202,6 +202,7 @@ effects.registerAll([
       const group = new THREE.Group();
       group.name = 'Satellites';
       const g = p.shape === 'sphere' ? new THREE.SphereGeometry(p.size / 2, 16, 12) : p.shape === 'octahedron' ? new THREE.OctahedronGeometry(p.size / 2) : new THREE.BoxGeometry(p.size, p.size, p.size);
+      g.setAttribute('sculptGlow', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
       const own = p.useCubeMaterial ? null : glowMat(p.color, p.glow);
       if (own) own.color.set(p.color);
       const mat = own || (Array.isArray(ctx.mesh.material) ? ctx.mesh.material[0] : ctx.mesh.material);

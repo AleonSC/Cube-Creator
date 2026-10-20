@@ -7,9 +7,10 @@ import particles from './particles.js';
 import animation from './animation.js';
 import scene from './scene.js';
 import exportPanel from './export.js';
+import sculpt from './sculpt.js';
 
 /**
  * Sidebar tabs, in order. A panel = { id, label, icon, render(app) -> Element }.
  * Add a tab = create a file and list it here.
  */
-export const PANELS = [presets, shape, material, surface, fx, particles, animation, scene, exportPanel];
+export const PANELS = [presets, shape, sculpt, material, surface, fx, particles, animation, scene, exportPanel];

@@ -13,6 +13,9 @@ export class MaterialBuilder {
     this.unlitMain = new THREE.MeshBasicMaterial({ name: 'CubeSurface' });
     this.unlitGrout = new THREE.MeshBasicMaterial({ name: 'CubeGrout' });
     this.signature = '';
+    // painted glow from the sculpt brush: per-vertex emissive added in the shader
+    this.sculptGlow = { value: 0 };
+    [this.main, this.grout, this.unlitMain, this.unlitGrout].forEach((m) => injectSculptGlow(m, this.sculptGlow));
   }
 
   /** @param textures result of TextureBuilder.build (or null) */
@@ -87,6 +90,18 @@ export class MaterialBuilder {
     return { main: u, grout: this.unlitGrout };
   }
 
+  /** Enable the painted-glow shader path only while a sculpt (which has the attribute) is shown. */
+  setSculptGlow(intensity, enabled) {
+    this.sculptGlow.value = intensity;
+    for (const m of [this.main, this.grout, this.unlitMain, this.unlitGrout]) {
+      const has = 'SCULPT_GLOW' in m.defines;
+      if (has === enabled) continue;
+      if (enabled) m.defines.SCULPT_GLOW = '';
+      else delete m.defines.SCULPT_GLOW;
+      m.needsUpdate = true;
+    }
+  }
+
   /** Per-frame animation hooks: emissive pulse/flicker + texture scrolling. */
   animate(state, t) {
     const a = state.animation;
@@ -108,4 +123,26 @@ export class MaterialBuilder {
     this.unlitMain.dispose();
     this.unlitGrout.dispose();
   }
+}
+
+/**
+ * Adds `sculptGlow` (vec3 per vertex, painted with the glow brush) to a
+ * material's emission. Geometries without the attribute read (0,0,0), so the
+ * injection is harmless everywhere else.
+ */
+function injectSculptGlow(material, uniform) {
+  material.defines ||= {};
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uSculptGlow = uniform;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\n#ifdef SCULPT_GLOW\nattribute vec3 sculptGlow;\nvarying vec3 vSculptGlow;\n#endif')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef SCULPT_GLOW\nvSculptGlow = sculptGlow;\n#endif');
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef SCULPT_GLOW\nuniform float uSculptGlow;\nvarying vec3 vSculptGlow;\n#endif');
+    if (shader.fragmentShader.includes('totalEmissiveRadiance')) {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n#ifdef SCULPT_GLOW\ntotalEmissiveRadiance += vSculptGlow * uSculptGlow;\n#endif');
+    } else {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', '#ifdef SCULPT_GLOW\noutgoingLight += vSculptGlow * uSculptGlow;\n#endif\n#include <opaque_fragment>');
+    }
+  };
+  material.customProgramCacheKey = () => ('SCULPT_GLOW' in material.defines ? 'sculptGlow:on' : 'sculptGlow:off');
 }

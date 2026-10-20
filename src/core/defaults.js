@@ -83,6 +83,8 @@ export const DEFAULT_STATE = {
     autoRotate: false,
     grid: false,
   },
+  // Sculpted mesh (binary data lives in IndexedDB / the saved file, keyed by id)
+  sculpt: { active: false, id: null, resolution: 150000, glow: 2 },
   clicker: {
     enabled: true,
     squash: 0.14,

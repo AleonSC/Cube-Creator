@@ -12,3 +12,4 @@ export const effects = new Registry('effects'); // attached 3D effects (outline,
 export const particlePresets = new Registry('particlePresets'); // particle emitter recipes
 export const particleSprites = new Registry('particleSprites'); // particle sprite textures
 export const exporters = new Registry('exporters'); // file exporters
+export const brushes = new Registry('brushes'); // sculpt & paint brushes
